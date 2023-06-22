@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Ruta al archivo RAW
+archivo="ruta/al/archivo.raw"
+
+# Ruta al archivo cifrado en formato hexadecimal
+archivo_cifrado="ruta/al/archivo_enxor.txt"
+
+# Clave de cifrado (debe contener solo caracteres hexadecimales)
+clave="0123456789abcdef"
+
+# Leer el contenido del archivo en un arreglo de bytes
+bytes=($(cat "$archivo" | xxd -p -c 1))
+
+# Obtener la longitud del arreglo de bytes
+longitud=${#bytes[@]}
+
+# Realizar la operación XOR en cada byte utilizando la clave
+for ((i = 0; i < $longitud; i++)); do
+    byte=${bytes[$i]}
+    key=${clave:$((i % ${#clave})):1}
+    xor_result=$((0x$byte ^ 0x$key))
+    bytes[$i]=$(printf "%02x" $xor_result)
+done
+
+# Guardar los bytes cifrados en un archivo en formato hexadecimal
+echo "${bytes[@]}" > "$archivo_cifrado"
+
+echo "Archivo cifrado en formato XOR guardado exitosamente."
